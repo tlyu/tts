@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="US-ASCII"?>
+<!DOCTYPE rfc PUBLIC "-//IETF//DTD RFC 2629//EN" "rfc2629.dtd" [
+<!ENTITY RFC1964 SYSTEM "http://xml2rfc.ietf.org/public/rfc/bibxml/reference.RFC.1964.xml">
+<!ENTITY RFC2119 SYSTEM "http://xml2rfc.ietf.org/public/rfc/bibxml/reference.RFC.2119.xml">
+<!ENTITY RFC3961 SYSTEM "http://xml2rfc.ietf.org/public/rfc/bibxml/reference.RFC.3961.xml">
+<!ENTITY RFC4120 SYSTEM "http://xml2rfc.ietf.org/public/rfc/bibxml/reference.RFC.4120.xml">
+<!ENTITY I-D.ietf-jose-json-web-algorithms SYSTEM "http://xml2rfc.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-jose-json-web-algorithms.xml">
+<!ENTITY I-D.ietf-jose-json-web-encryption SYSTEM "http://xml2rfc.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-jose-json-web-encryption.xml">
+<!ENTITY I-D.ietf-jose-json-web-key SYSTEM "http://xml2rfc.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-jose-json-web-key.xml">
+<!ENTITY I-D.ietf-jose-json-web-signature SYSTEM "http://xml2rfc.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-jose-json-web-signature.xml">
+<!ENTITY I-D.ietf-oauth-json-web-token SYSTEM "http://xml2rfc.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-oauth-json-web-token.xml">
+]>
+<?xml-stylesheet type='text/xsl' href='rfc2629.xslt'?>
+<?rfc strict="yes"?>
+<?rfc toc="yes"?>
+<?rfc symrefs="yes"?>
+<?rfc sortrefs="yes"?>
+<?rfc compact="yes"?>
+<?rfc subcompact="no"?>
+<rfc category="std" docName="draft-yu-oauth-token-translation-00"
+     ipr="trust200902">
+  <front>
+    <title abbrev="Token Translation Service">
+      A Kerberos Token Translation Service for OAuth
+    </title>
+    <author fullname="Tom Yu" initials="T.Y." surname="Yu">
+      <organization abbrev="MIT-KIT">
+        MIT Consortium for Keberberos and Internet Trust
+      </organization>
+      <address>
+        <email>tlyu@mit.edu</email>
+      </address>
+    </author>
+    <date/>
+    <abstract>
+      <t>
+        This document describes a Token Translation Service that
+        allows a site to use an existing Kerberos infrastructure to
+        provide authentication in an OAuth 2.0 web service
+        environment.
+      </t>
+    </abstract>
+  </front>
+  <middle>
+    <section title="Introduction">
+      <t>
+        An OAuth 2.0 client and an OAuth 2.0 authorization server
+        could be registered within the same Kerberos realm, or be
+        registered in Kerberos realms that share a cross-realm key.
+        The following is a description of how a site could leverage an
+        existing Kerberos infrastructure to provide authentication in
+        an OAuth 2.0 web service environment.
+      </t>
+      <t>
+        The Token Translation Service (TTS) allows an OAuth client to
+        submit a Kerberos service ticket and receive an OAuth
+        Proof-of-Possession token for the authorization server in
+        return.  The TTS can be integrated into the Kerberos KDC, or
+        it can be a standalone service that has a copy of the Kerberos
+        long-term service key of the OAuth authorization server.  The
+        latter scenario has better security properties because it uses
+        the least amount of privilege required for providing the
+        service.
+      </t>
+    </section>
+    <section title="Requirements Language">
+      <t>
+        The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL
+        NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and
+        "OPTIONAL" in this document are to be interpreted as described
+        in <xref target="RFC2119">RFC 2119</xref>.
+      </t>
+    </section>
+    <section title="Overview">
+      <t>
+        The client submits a request to the TTS that contains the
+        Kerberos ticket.  The client need not be able to decode the
+        Kerberos ticket itself; as long as it somehow obtains a copy
+        of the session key from within the ticket, it can use the
+        resulting OAuth Proof-of-Possession token without having any
+        knowledge of Kerberos encodings.
+      </t>
+      <figure>
+        <preamble>Example request</preamble>
+        <artwork><![CDATA[
+  POST /tts HTTP/1.1
+  Host: www.example.com
+  Content-Type: application/x-www-form-urlencoded
+
+  ticket=YX8wfaADAgEFoQ0bC0VYQU1QTEUuQ09N...
+]]>
+        </artwork>
+      </figure>
+      <figure>
+        <preamble>Exmaple reply</preamble>
+        <artwork><![CDATA[
+  HTTP/1.1 200 OK
+  Content-Type: application/jwt
+
+  eyJhbGciOiJub25lIn0....
+]]>
+        </artwork>
+      </figure>
+      <t>
+        The client can use the resulting Proof-of-Possession token to
+        contact the OAuth Authorization Server to receive tokens to
+        access Resource Servers.  This can involve using the OAuth
+        Authorization Server to gain further Proof-of-Possession
+        tokens for resource servers as described in
+        draft-bradley-oauth-pop-key-distribution.  Alternatively, the
+        TTS could provide OAuth Access Tokens that are
+        Proof-of-Possession tokens, and the client could use them to
+        access the OAuth Resource Server directly using a protocol
+        such as described in draft-ietf-oauth-signed-http-request.
+      </t>
+    </section>
+    <section title="Claim Translation">
+      <t>
+        Kerberos principal names have some amount of structure, so
+        they will need to be "flattened" to a single string encoding
+        for use in the JWT.  RFC 1964 section 2.1.3 ("Exported Name
+        Object Form for Kerberos V5 Mechanism") provides an existing
+        convention for doing this in a relatively human-readable form.
+        The client principal name (cname, crealm) is translated to the
+        JWT "sub" claim.  The server principal name (sname, realm) is
+        translated to the JWT "aud" claim.  The principal name of the
+        Ticket Granting Service (TGS) for the client's realm is
+        translated to the JWT "iss" claim.
+      </t>
+      <t>
+        The ticket authtime is translated to the JWT "iat" claim.  The
+        ticket starttime is translated to the JWT "nbf" claim.  The
+        ticket endtime is translated to the JWT "exp" claim.  There is
+        no JWT claim corresponding to the ticket renew-till timestamp,
+        so a new one would need to be registered if this attribute is
+        to be translated.
+      </t>
+      <t>
+        Embedding IP addresses in Kerberos tickets is largely
+        obsolescent, so the JWT won't contain them.  The TTS SHOULD
+        refuse to translate Kerberos tickets that contain IP addresses
+        in the caddr field.
+      </t>
+      <t>
+        Translations for Kerberos authorization data will need to be
+        configured on the TTS if needed, because there is no general
+        way to translate Kerberos authorization data into a form that
+        is useful to an OAuth Authorization Server.  Additional
+        specifications can define procedures for translating a given
+        Kerberos authorization data type to JWT format.
+      </t>
+    </section>
+    <section title="Key Management">
+      <t>
+        The RFC 3961 pseudo-random function (PRF) for a given Kerberos
+        enctype will be used to produce any symmetric keys to be used
+        with JWE or JWS in conjunction with the resulting JWT.  The
+        input octet string for the PRF for this purpose will be
+        "tts.jwt." with the JWK encryption algorithm name appended.
+      </t>
+    </section>
+    <section title="Security Considerations">
+      <t>
+        The Token Translation Service SHOULD be implemented as a
+        standalone service that has access to the relevant individual
+        Kerberos service principal key, rather than integrated into
+        the Kerberos KDC.  This allows the TTS to operate at the
+        lowest privilege level required for its task, and prevents a
+        compromise of the TTS from affecting parts of the Kerberos
+        infrastructure that do not depend on it.
+      </t>
+    </section>
+  </middle>
+  <back>
+    <references title="Normative References">
+      &RFC1964;
+      &RFC2119;
+      &RFC3961;
+      &RFC4120;
+      &I-D.ietf-jose-json-web-algorithms;
+      &I-D.ietf-jose-json-web-encryption;
+      &I-D.ietf-jose-json-web-key;
+      &I-D.ietf-jose-json-web-signature;
+      &I-D.ietf-oauth-json-web-token;
+    </references>
+  </back>
+</rfc>
