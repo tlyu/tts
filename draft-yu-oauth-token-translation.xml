@@ -92,7 +92,7 @@
         </artwork>
       </figure>
       <figure>
-        <preamble>Exmaple reply</preamble>
+        <preamble>Example reply</preamble>
         <artwork><![CDATA[
   HTTP/1.1 200 OK
   Content-Type: application/jwt
