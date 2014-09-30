@@ -25,7 +25,7 @@
     </title>
     <author fullname="Tom Yu" initials="T.Y." surname="Yu">
       <organization abbrev="MIT-KIT">
-        MIT Consortium for Keberberos and Internet Trust
+        MIT Consortium for Kerberos and Internet Trust
       </organization>
       <address>
         <email>tlyu@mit.edu</email>
@@ -116,39 +116,61 @@
     </section>
     <section title="Claim Translation">
       <t>
-        Kerberos principal names have some amount of structure, so
-        they will need to be "flattened" to a single string encoding
-        for use in the JWT.  RFC 1964 section 2.1.3 ("Exported Name
-        Object Form for Kerberos V5 Mechanism") provides an existing
-        convention for doing this in a relatively human-readable form.
-        The client principal name (cname, crealm) is translated to the
-        JWT "sub" claim.  The server principal name (sname, realm) is
-        translated to the JWT "aud" claim.  The principal name of the
-        Ticket Granting Service (TGS) for the client's realm is
-        translated to the JWT "iss" claim.
+        [ This section specifies a mapping between fields of a
+        Kerberos ticket and JWT claims .  Related protocols could use
+        this mapping to translate JWT claims into Kerberos ticket
+        fields or vice versa. ]
       </t>
-      <t>
-        The ticket authtime is translated to the JWT "iat" claim.  The
-        ticket starttime is translated to the JWT "nbf" claim.  The
-        ticket endtime is translated to the JWT "exp" claim.  There is
-        no JWT claim corresponding to the ticket renew-till timestamp,
-        so a new one would need to be registered if this attribute is
-        to be translated.
-      </t>
-      <t>
-        Embedding IP addresses in Kerberos tickets is largely
-        obsolescent, so the JWT won't contain them.  The TTS SHOULD
-        refuse to translate Kerberos tickets that contain IP addresses
-        in the caddr field.
-      </t>
-      <t>
-        Translations for Kerberos authorization data will need to be
-        configured on the TTS if needed, because there is no general
-        way to translate Kerberos authorization data into a form that
-        is useful to an OAuth Authorization Server.  Additional
-        specifications can define procedures for translating a given
-        Kerberos authorization data type to JWT format.
-      </t>
+      <section title="Principal Names">
+        <t>
+          Kerberos principal names have some amount of structure, so
+          they will generally need to be "flattened" to a single
+          string encoding for use in JWT claims.  For translating
+          Kerberos principal names into JWT claims, the TTS SHOULD use
+          the procedure in RFC 1964 section 2.1.3 ("Exported Name
+          Object Form for Kerberos V5 Mechanism").  The TTS MAY
+          provide alternative, possibly site-configured, mappings from
+          principal names into JWT claims.
+        </t>
+        <t>
+          The TTS SHOULD translate the Kerberos client principal name
+          (the cname and crealm fields of the ticket) to the JWT "sub"
+          (subject) claim.  The TTS SHOULD translate the Kerberos
+          server principal name (the sname and realm fields of the
+          ticket) to the JWT "aud" (audience) claim.  The TTS SHOULD
+          translate the principal name of the Ticket Granting Service
+          (TGS) for the client's realm to the JWT "iss" (issuer)
+          claim.
+        </t>
+      </section>
+      <section title="Timestamps">
+        <t>
+          The ticket authtime is translated to the JWT "iat" claim.
+          The ticket starttime is translated to the JWT "nbf" claim.
+          The ticket endtime is translated to the JWT "exp" claim.
+          There is no JWT claim corresponding to the ticket renew-till
+          timestamp, so a new one would need to be registered if this
+          attribute is to be translated.
+        </t>
+      </section>
+      <section title="Addresses">
+        <t>
+          Embedding IP addresses in Kerberos tickets is largely
+          obsolescent, so the JWT won't contain them.  The TTS SHOULD
+          refuse to translate Kerberos tickets that contain IP
+          addresses in the caddr field.
+        </t>
+      </section>
+      <section title="Authorization Data">
+        <t>
+          Translations for Kerberos authorization data will need to be
+          configured on the TTS if needed, because there is no general
+          way to translate Kerberos authorization data into a form
+          that is useful to an OAuth Authorization Server.  Additional
+          specifications can define procedures for translating a given
+          Kerberos authorization data type to JWT format.
+        </t>
+      </section>
     </section>
     <section title="Key Management">
       <t>
@@ -168,6 +190,16 @@
         lowest privilege level required for its task, and prevents a
         compromise of the TTS from affecting parts of the Kerberos
         infrastructure that do not depend on it.
+      </t>
+      <t>
+        The service principal name of a Kerberos ticket is not
+        cryptographically protected, because it is only used to locate
+        a decryption key.  In Kerberos, services are presumed to have
+        unique, strongly random keys.  If an OAuth server depends on
+        having the "aud" claim correctly reflect the service
+        principal, the TTS MUST ensure that the service key is unique
+        and is correctly associated with the principal name in the
+        "aud" claim.
       </t>
     </section>
   </middle>
