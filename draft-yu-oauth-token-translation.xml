@@ -17,7 +17,7 @@
 <?rfc sortrefs="yes"?>
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
-<rfc category="std" docName="draft-yu-oauth-token-translation-00"
+<rfc category="std" docName="draft-yu-oauth-token-translation-01"
      ipr="trust200902">
   <front>
     <title abbrev="Token Translation Service">
@@ -171,6 +171,33 @@
           Kerberos authorization data type to JWT format.
         </t>
       </section>
+      <section title="Example">
+        <t>
+          For example, a Kerberos ticket with client name (cname)
+          "someuser" and client realm (crealm) "EXAMPLE.COM", service
+          name (sname) "HTTP/as.example.com" and realm "EXAMPLE.COM",
+          authtime of 20010101000000Z and endtime of 20010101100000Z,
+          would result in a JWT containing the following fields:
+        </t>
+        <figure>
+          <artwork><![CDATA[
+   {
+     "iss": "krbtgt/EXAMPLE.COM@EXAMPLE.COM",
+     "sub": "someuser@EXAMPLE.COM",
+     "aud": "HTTP/as.example.com@EXAMPLE.COM",
+     "exp": 978343200,
+     "iat": 978307200,
+     "cnf": {
+       "jwk": {
+          "kty": "oct",
+           "k": "AADerb7vyv4",
+           "alg": "A128GCM"
+       }
+     }
+   }
+]]></artwork>
+        </figure>
+      </section>
     </section>
     <section title="Key Management">
       <t>
@@ -179,6 +206,17 @@
         with JWE or JWS in conjunction with the resulting JWT.  The
         input octet string for the PRF for this purpose will be
         "tts.jwt." with the JWK encryption algorithm name appended.
+        At least the Kerberos session key will be translated in this
+        way.  If the JWT is encrypted using JWE, the symmetric key for
+        that will also be derived from the long-term Kerberos key for
+        the service in this way.
+      </t>
+      <t>
+        Typically, the TTS produces a JWT that is a JWE token, so the
+        contents of the JWT are encrypted.  Alternatively, the TTS
+        could produce a plaintext JWS token, but in that case the JWK
+        for the "cnf" claim MUST be protected using a key wrap
+        algorithm.
       </t>
     </section>
     <section title="Security Considerations">
